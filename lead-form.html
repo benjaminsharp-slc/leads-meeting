@@ -41,23 +41,18 @@
     align-items: baseline;
     gap: 10px;
   }
-
   header h1 {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 22px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
   }
-
   header .sub { font-size: 13px; color: #aaa; }
 
   .container { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
 
   .card {
     background: var(--card);
-    border-radius: 10px;
-    padding: 20px;
+    border-radius: 10px; padding: 20px;
     margin-bottom: 14px;
     border: 1px solid var(--border);
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -69,12 +64,9 @@
 
   label {
     display: block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 5px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 5px;
   }
 
   input[type="text"], input[type="date"] {
@@ -83,57 +75,44 @@
     border: 1.5px solid var(--border);
     border-radius: 8px;
     font-family: 'Barlow', sans-serif;
-    font-size: 16px;
-    color: var(--ink);
-    background: white;
-    -webkit-appearance: none;
+    font-size: 16px; color: var(--ink);
+    background: white; -webkit-appearance: none;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-
   input:focus {
-    outline: none;
-    border-color: var(--orange);
+    outline: none; border-color: var(--orange);
     box-shadow: 0 0 0 3px rgba(232,92,26,0.12);
   }
 
   .items-title {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 10px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
   }
 
   .item-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    display: flex; gap: 8px; align-items: center;
     margin-bottom: 8px;
   }
-
   .item-row input {
-    flex: 1;
-    padding: 12px 13px;
+    flex: 1; padding: 12px 13px;
     border: 1.5px solid var(--border);
     border-radius: 8px;
     font-family: 'Barlow', sans-serif;
-    font-size: 15px;
-    background: white;
-    color: var(--ink);
+    font-size: 15px; background: white; color: var(--ink);
     -webkit-appearance: none;
+  }
+  .item-row input:focus {
+    outline: none; border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(232,92,26,0.12);
   }
 
   .btn-remove {
-    flex-shrink: 0;
-    width: 38px; height: 38px;
-    border: none;
-    background: #f0ece8;
-    border-radius: 8px;
-    cursor: pointer;
+    flex-shrink: 0; width: 38px; height: 38px;
+    border: none; background: #f0ece8;
+    border-radius: 8px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     font-size: 20px; color: var(--muted);
-    transition: background 0.15s, color 0.15s;
   }
   .btn-remove:active { background: #fce8e0; color: var(--error); }
 
@@ -145,65 +124,56 @@
     font-family: 'Barlow', sans-serif;
     font-size: 14px; color: var(--muted);
     cursor: pointer; margin-top: 2px;
-    transition: border-color 0.15s, color 0.15s;
   }
   .btn-add-item:active { border-color: var(--orange); color: var(--orange); }
 
   .btn-submit {
-    display: block; width: 100%;
-    padding: 17px;
-    background: var(--orange);
-    color: white; border: none;
+    display: block; width: 100%; padding: 17px;
+    background: var(--orange); color: white; border: none;
     border-radius: 10px;
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 21px; font-weight: 700;
     letter-spacing: 0.06em; text-transform: uppercase;
-    cursor: pointer;
+    cursor: pointer; margin-top: 4px;
     transition: background 0.15s, transform 0.1s;
-    margin-top: 4px;
   }
   .btn-submit:active { background: #c44d14; transform: scale(0.98); }
   .btn-submit:disabled { background: #ccc; cursor: not-allowed; transform: none; }
 
   .spinner {
-    display: inline-block;
-    width: 18px; height: 18px;
+    display: inline-block; width: 18px; height: 18px;
     border: 2.5px solid rgba(255,255,255,0.4);
-    border-top-color: white;
-    border-radius: 50%;
+    border-top-color: white; border-radius: 50%;
     animation: spin 0.7s linear infinite;
-    vertical-align: middle;
-    margin-right: 8px;
+    vertical-align: middle; margin-right: 8px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .banner {
     border-radius: 10px; padding: 22px;
-    margin-bottom: 14px; text-align: center;
-    display: none;
+    margin-bottom: 14px; text-align: center; display: none;
   }
   .banner.show { display: block; }
   .banner.success { background: var(--success-bg); border: 1.5px solid #a3d4b8; }
-  .banner.err { background: var(--error-bg); border: 1.5px solid #f5bbb0; }
-  .banner .icon { font-size: 38px; margin-bottom: 8px; }
+  .banner.err     { background: var(--error-bg);   border: 1.5px solid #f5bbb0; }
+  .banner .icon   { font-size: 38px; margin-bottom: 8px; }
   .banner h2 {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 22px; font-weight: 700;
     letter-spacing: 0.04em; text-transform: uppercase;
   }
   .banner.success h2 { color: var(--success); }
-  .banner.err h2 { color: var(--error); }
+  .banner.err h2     { color: var(--error); }
   .banner p { font-size: 14px; color: var(--muted); margin-top: 5px; }
 
   .btn-action {
     display: inline-block; margin-top: 14px;
-    padding: 10px 22px; color: white;
-    border: none; border-radius: 8px;
-    font-family: 'Barlow', sans-serif;
+    padding: 10px 22px; color: white; border: none;
+    border-radius: 8px; font-family: 'Barlow', sans-serif;
     font-size: 14px; font-weight: 600; cursor: pointer;
   }
   .btn-action.green { background: var(--success); }
-  .btn-action.red { background: var(--error); }
+  .btn-action.red   { background: var(--error); }
 
   .config-warning {
     background: #fff8e1; border: 1.5px solid #f0c040;
@@ -281,7 +251,7 @@
 
 <script>
   // ══════════════════════════════════════════════════════
-  //  STEP 1: Replace this URL with your Apps Script URL
+  //  Replace this with your Apps Script Web App URL
   const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL';
   // ══════════════════════════════════════════════════════
 
@@ -290,14 +260,13 @@
     document.getElementById('submitBtn').disabled = true;
   }
 
-  // Pre-fill date and saved name
   document.getElementById('meetingDate').valueAsDate = new Date();
   const savedName = localStorage.getItem('leads_name');
   if (savedName) document.getElementById('leadName').value = savedName;
 
   function addItem(value = '') {
     const list = document.getElementById('itemsList');
-    const row = document.createElement('div');
+    const row  = document.createElement('div');
     row.className = 'item-row';
     const safe = String(value).replace(/"/g, '&quot;');
     row.innerHTML = `
@@ -312,6 +281,7 @@
 
   document.getElementById('leadForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+
     const date    = document.getElementById('meetingDate').value;
     const lead    = document.getElementById('leadName').value.trim();
     const project = document.getElementById('projectName').value.trim();
@@ -331,26 +301,35 @@
     document.getElementById('errorBanner').classList.remove('show');
 
     try {
-      const resp = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' }, // avoid CORS preflight
-        body: JSON.stringify({ action: 'submit', date, project, lead, items }),
+      // Build GET URL with all parameters
+      const params = new URLSearchParams({
+        action:  'submit',
+        date,
+        project,
+        lead,
+        items: JSON.stringify(items)
       });
+      const url = `${APPS_SCRIPT_URL}?${params.toString()}`;
+
+      const resp = await fetch(url, { redirect: 'follow' });
       const text = await resp.text();
+
       let data;
-      try { data = JSON.parse(text); } catch { throw new Error('Unexpected server response'); }
+      try { data = JSON.parse(text); }
+      catch { throw new Error('Unexpected response from server. Check that your Apps Script URL is correct and redeployed.'); }
+
       if (data.error) throw new Error(data.error);
 
+      // Success
       document.getElementById('leadForm').style.display = 'none';
       document.getElementById('successBanner').classList.add('show');
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const [y,m,d2] = date.split('-');
+      const [y, m, d] = date.split('-');
       document.getElementById('successMsg').textContent =
-        `${project} — ${lead} · ${items.length} item${items.length !== 1 ? 's' : ''} saved for ${months[+m-1]} ${+d2}`;
+        `${project} — ${lead} · ${items.length} item${items.length !== 1 ? 's' : ''} saved for ${months[+m-1]} ${+d}`;
 
     } catch(err) {
-      document.getElementById('errorMsg').textContent =
-        err.message || 'Could not reach the server. Check your connection and try again.';
+      document.getElementById('errorMsg').textContent = err.message;
       document.getElementById('errorBanner').classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Submit Update';
