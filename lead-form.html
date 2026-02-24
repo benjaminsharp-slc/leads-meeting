@@ -252,10 +252,10 @@
 <script>
   // ══════════════════════════════════════════════════════
   //  Replace this with your Apps Script Web App URL
-  const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby82OvqsMh8_g5Asnh8B5WjPAvjg8OuFYFnKLdKxmt6HRsPVTT8TK63r_aFHxs-uPdbAA/exec';
   // ══════════════════════════════════════════════════════
 
-  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycby82OvqsMh8_g5Asnh8B5WjPAvjg8OuFYFnKLdKxmt6HRsPVTT8TK63r_aFHxs-uPdbAA/exec') {
+  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL') {
     document.getElementById('configWarning').classList.add('show');
     document.getElementById('submitBtn').disabled = true;
   }
@@ -279,7 +279,7 @@
 
   addItem(); addItem(); addItem();
 
-  document.getElementById('leadForm').addEventListener('submit', async function(e) {
+  document.getElementById('leadForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
     const date    = document.getElementById('meetingDate').value;
@@ -300,36 +300,24 @@
     btn.innerHTML = '<span class="spinner"></span>Submitting…';
     document.getElementById('errorBanner').classList.remove('show');
 
-    try {
-      // Build GET URL with all parameters
-      const params = new URLSearchParams({
-        action:  'submit',
-        date,
-        project,
-        lead,
-        items: JSON.stringify(items)
-      });
-      const url = `${APPS_SCRIPT_URL}?${params.toString()}`;
-
-      const resp = await fetch(url, { redirect: 'follow' });
-      const text = await resp.text();
-
-      let data;
-      try { data = JSON.parse(text); }
-      catch { throw new Error('Unexpected response from server. Check that your Apps Script URL is correct and redeployed.'); }
-
-      if (data.error) throw new Error(data.error);
-
-      // Success
+    jsonp({
+      action: 'submit', date, project, lead,
+      items: JSON.stringify(items)
+    }, function(data) {
+      if (data.error) {
+        showError(data.error);
+        return;
+      }
       document.getElementById('leadForm').style.display = 'none';
       document.getElementById('successBanner').classList.add('show');
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const [y, m, d] = date.split('-');
       document.getElementById('successMsg').textContent =
-        `${project} — ${lead} · ${items.length} item${items.length !== 1 ? 's' : ''} saved for ${months[+m-1]} ${+d}`;
+        project + ' — ' + lead + ' · ' + items.length + ' item' + (items.length !== 1 ? 's' : '') + ' saved for ' + months[+m-1] + ' ' + +d;
+    }, showError);
 
-    } catch(err) {
-      document.getElementById('errorMsg').textContent = err.message;
+    function showError(msg) {
+      document.getElementById('errorMsg').textContent = msg;
       document.getElementById('errorBanner').classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Submit Update';
@@ -349,6 +337,35 @@
     document.getElementById('submitBtn').textContent = 'Submit Update';
     document.getElementById('meetingDate').valueAsDate = new Date();
   }
+  // ── JSONP helper — works across all domains with Apps Script ──
+  function jsonp(params, onSuccess, onError) {
+    const cbName = '_cb_' + Date.now();
+    const timeoutId = setTimeout(function() {
+      cleanup();
+      onError('Request timed out. Check your Apps Script URL and redeploy.');
+    }, 15000);
+
+    window[cbName] = function(data) {
+      cleanup();
+      onSuccess(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timeoutId);
+      delete window[cbName];
+      const s = document.getElementById(cbName);
+      if (s) s.remove();
+    }
+
+    params.callback = cbName;
+    const qs = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k])).join('&');
+    const script = document.createElement('script');
+    script.id = cbName;
+    script.src = APPS_SCRIPT_URL + '?' + qs;
+    script.onerror = function() { cleanup(); onError('Could not reach server. Check your Apps Script URL.'); };
+    document.head.appendChild(script);
+  }
+
 </script>
 </body>
 </html>

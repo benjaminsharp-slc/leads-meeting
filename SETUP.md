@@ -114,7 +114,7 @@ reliably from any browser without CORS issues.
 
 ## TROUBLESHOOTING
 
-**"Unexpected response" or "Could not parse" error**
+**"Unexpected response", "timed out", or "Could not reach server" error**
 - The most common cause: you need to **redeploy as a new version** after pasting the new `Code.gs`
 - Go to Apps Script → Deploy → Manage deployments → pencil icon → New version → Deploy
 - Make sure "Who has access" is **Anyone** (not "Anyone with Google account")

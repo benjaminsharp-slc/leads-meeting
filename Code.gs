@@ -11,20 +11,20 @@ function doGet(e) {
   try {
     const action = e.parameter.action || "list";
 
-    if (action === "list")   return handleList(e);
-    if (action === "submit") return handleSubmit(e);
-    if (action === "delete") return handleDelete(e);
+    if (action === "list")   return jsonResponse(handleList(e),   e);
+    if (action === "submit") return jsonResponse(handleSubmit(e), e);
+    if (action === "delete") return jsonResponse(handleDelete(e), e);
 
-    return jsonResponse({ error: "Unknown action: " + action });
+    return jsonResponse({ error: "Unknown action: " + action }, e);
   } catch (err) {
-    return jsonResponse({ error: err.message });
+    return jsonResponse({ error: err.message }, e);
   }
 }
 
 // ── List submissions for a date ──────────────────────────────
 function handleList(e) {
   const date = e.parameter.date;
-  if (!date) return jsonResponse({ error: "Missing date parameter" });
+  if (!date) return { error: "Missing date parameter" };
 
   const sheet = getOrCreateSheet();
   const data  = sheet.getDataRange().getValues();
@@ -40,7 +40,7 @@ function handleList(e) {
       id:          row[5]
     }));
 
-  return jsonResponse({ submissions });
+  return { submissions };
 }
 
 // ── Submit / update a project entry ─────────────────────────
@@ -48,10 +48,10 @@ function handleSubmit(e) {
   const date    = e.parameter.date;
   const project = e.parameter.project;
   const lead    = e.parameter.lead;
-  const items   = safeParseJSON(decodeURIComponent(e.parameter.items || "[]"));
+  const items   = safeParseJSON(e.parameter.items || "[]");
 
   if (!date || !project || !lead) {
-    return jsonResponse({ error: "Missing required fields: date, project, lead" });
+    return { error: "Missing required fields: date, project, lead" };
   }
 
   const sheet = getOrCreateSheet();
@@ -62,20 +62,20 @@ function handleSubmit(e) {
     if (data[i][0] === date && data[i][1] === project && data[i][2] === lead) {
       sheet.getRange(i + 1, 4).setValue(JSON.stringify(items));
       sheet.getRange(i + 1, 5).setValue(new Date().toISOString());
-      return jsonResponse({ status: "updated", id: data[i][5] });
+      return { status: "updated", id: data[i][5] };
     }
   }
 
   // New row
   const id = Utilities.getUuid();
   sheet.appendRow([date, project, lead, JSON.stringify(items), new Date().toISOString(), id]);
-  return jsonResponse({ status: "created", id });
+  return { status: "created", id };
 }
 
 // ── Delete a submission by id ────────────────────────────────
 function handleDelete(e) {
   const id = e.parameter.id;
-  if (!id) return jsonResponse({ error: "Missing id" });
+  if (!id) return { error: "Missing id" };
 
   const sheet = getOrCreateSheet();
   const data  = sheet.getDataRange().getValues();
@@ -83,11 +83,11 @@ function handleDelete(e) {
   for (let i = 1; i < data.length; i++) {
     if (data[i][5] === id) {
       sheet.deleteRow(i + 1);
-      return jsonResponse({ status: "deleted" });
+      return { status: "deleted" };
     }
   }
 
-  return jsonResponse({ error: "Row not found" });
+  return { error: "Row not found" };
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -116,7 +116,14 @@ function safeParseJSON(str) {
   try { return JSON.parse(str || "[]"); } catch(e) { return []; }
 }
 
-function jsonResponse(data) {
+function jsonResponse(data, e) {
+  const callback = e && e.parameter && e.parameter.callback;
+  if (callback) {
+    const js = callback + '(' + JSON.stringify(data) + ');';
+    return ContentService
+      .createTextOutput(js)
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
