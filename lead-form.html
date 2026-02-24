@@ -264,17 +264,25 @@
   const savedName = localStorage.getItem('leads_name');
   if (savedName) document.getElementById('leadName').value = savedName;
 
-  function addItem(value = '') {
-    const list = document.getElementById('itemsList');
-    const row  = document.createElement('div');
+  var itemPlaceholders = [
+    'e.g. drywall / mud – next 3 days',
+    'e.g. cabinet assembly – ? days',
+    'e.g. pick up plumbing order on Friday'
+  ];
+
+  function addItem(value) {
+    value = value || '';
+    var list  = document.getElementById('itemsList');
+    var idx   = list.querySelectorAll('.item-row').length;
+    var placeholder = itemPlaceholders[idx] || itemPlaceholders[itemPlaceholders.length - 1];
+    var row   = document.createElement('div');
     row.className = 'item-row';
-    const safe = String(value).replace(/"/g, '&quot;');
-    row.innerHTML = `
-      <input type="text" placeholder="e.g. drywall / mud – next 3 days" value="${safe}">
-      <button type="button" class="btn-remove" onclick="this.parentElement.remove()" aria-label="Remove">×</button>
-    `;
+    var safe = String(value).replace(/"/g, '&quot;');
+    row.innerHTML =
+      '<input type="text" placeholder="' + placeholder + '" value="' + safe + '">' +
+      '<button type="button" class="btn-remove" onclick="this.parentElement.remove()" aria-label="Remove">×</button>';
     list.appendChild(row);
-    if (!value) setTimeout(() => row.querySelector('input').focus(), 50);
+    if (!value) setTimeout(function() { row.querySelector('input').focus(); }, 50);
   }
 
   addItem(); addItem(); addItem();
