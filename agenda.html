@@ -161,7 +161,22 @@
     cursor: pointer; transition: background 0.15s; margin-top: 4px;
   }
   .btn-generate:hover { background: #c44d14; }
-  .btn-generate:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-generate:disabled { background: #888; cursor: not-allowed; }
+
+  .btn-spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2.5px solid rgba(255,255,255,0.35);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+
+  .gen-error {
+    display: none;
+    background: #fce8e0; border: 1.5px solid #f5bbb0;
+    border-radius: 8px; padding: 12px 16px;
+    font-size: 13px; color: #c0432a; margin-top: 10px;
+  }
 
   .config-warning {
     background: #fff8e1; border: 1.5px solid #f0c040;
@@ -232,8 +247,9 @@
   </div>
 
   <button class="btn-generate" id="generateBtn" onclick="generateAgenda()" disabled>
-    ⬇ Download Agenda (.docx)
+    &#11015; Download Agenda (.docx)
   </button>
+  <div class="gen-error" id="genError"></div>
 
 </div>
 
@@ -399,7 +415,9 @@
     if (selected.length === 0) { alert('Select at least one submission first.'); return; }
 
     const btn = document.getElementById('generateBtn');
-    btn.disabled = true; btn.textContent = 'Generating…';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span> Building…';
+    document.getElementById('genError').style.display = 'none';
 
     try {
       const DARK = '1A1A1A', ORANGE = 'E85C1A', MUTED = '7A7268', WHITE = 'FFFFFF', ALT = 'FAFAF8';
@@ -491,10 +509,25 @@
 
       const blob     = await Packer.toBlob(doc);
       const fileName = `Leads_Agenda_${date.replace(/-/g,'')}.docx`;
-      saveAs(blob, fileName);
+            saveAs(blob, fileName);
 
-    } finally {
-      btn.disabled = false; btn.textContent = '⬇ Download Agenda (.docx)';
+      // Success feedback
+      btn.disabled = false;
+      btn.innerHTML = '&#10003; Downloaded &mdash; ' + fileName;
+      btn.style.background = '#2d7a4f';
+      setTimeout(function() {
+        btn.innerHTML = '&#11015; Download Agenda (.docx)';
+        btn.style.background = '';
+      }, 4000);
+
+    } catch(err) {
+      btn.disabled = false;
+      btn.innerHTML = '&#11015; Download Agenda (.docx)';
+      btn.style.background = '';
+      var errEl = document.getElementById('genError');
+      errEl.textContent = 'Error: ' + (err.message || String(err));
+      errEl.style.display = 'block';
+      console.error('generateAgenda error:', err);
     }
   }
   // ── JSONP helper — works across all domains with Apps Script ──
