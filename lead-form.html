@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Leads Meeting — Submit Update</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap');
+
+  :root {
+    --ink: #1a1a1a;
+    --orange: #E85C1A;
+    --border: #d8d0c8;
+    --bg: #f5f2ee;
+    --card: #ffffff;
+    --muted: #7a7268;
+    --success: #2d7a4f;
+    --success-bg: #edf7f2;
+    --error: #c0432a;
+    --error-bg: #fce8e0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  header {
+    background: var(--ink);
+    color: white;
+    padding: 18px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  header .sub { font-size: 13px; color: #aaa; }
+
+  .container { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  input[type="text"], input[type="date"] {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px;
+    color: var(--ink);
+    background: white;
+    -webkit-appearance: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(232,92,26,0.12);
+  }
+
+  .items-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .item-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .item-row input {
+    flex: 1;
+    padding: 12px 13px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px;
+    background: white;
+    color: var(--ink);
+    -webkit-appearance: none;
+  }
+
+  .btn-remove {
+    flex-shrink: 0;
+    width: 38px; height: 38px;
+    border: none;
+    background: #f0ece8;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-remove:active { background: #fce8e0; color: var(--error); }
+
+  .btn-add-item {
+    display: flex; align-items: center; gap: 7px;
+    width: 100%; padding: 10px 14px;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px; background: none;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px; color: var(--muted);
+    cursor: pointer; margin-top: 2px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-add-item:active { border-color: var(--orange); color: var(--orange); }
+
+  .btn-submit {
+    display: block; width: 100%;
+    padding: 17px;
+    background: var(--orange);
+    color: white; border: none;
+    border-radius: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 21px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 4px;
+  }
+  .btn-submit:active { background: #c44d14; transform: scale(0.98); }
+  .btn-submit:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .banner {
+    border-radius: 10px; padding: 22px;
+    margin-bottom: 14px; text-align: center;
+    display: none;
+  }
+  .banner.show { display: block; }
+  .banner.success { background: var(--success-bg); border: 1.5px solid #a3d4b8; }
+  .banner.err { background: var(--error-bg); border: 1.5px solid #f5bbb0; }
+  .banner .icon { font-size: 38px; margin-bottom: 8px; }
+  .banner h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .banner.success h2 { color: var(--success); }
+  .banner.err h2 { color: var(--error); }
+  .banner p { font-size: 14px; color: var(--muted); margin-top: 5px; }
+
+  .btn-action {
+    display: inline-block; margin-top: 14px;
+    padding: 10px 22px; color: white;
+    border: none; border-radius: 8px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .btn-action.green { background: var(--success); }
+  .btn-action.red { background: var(--error); }
+
+  .config-warning {
+    background: #fff8e1; border: 1.5px solid #f0c040;
+    border-radius: 10px; padding: 16px; margin-bottom: 14px;
+    font-size: 13px; line-height: 1.6; display: none;
+  }
+  .config-warning.show { display: block; }
+  .config-warning strong { display: block; font-size: 14px; margin-bottom: 4px; }
+  .config-warning code { background: #f5f2ee; border-radius: 3px; padding: 1px 5px; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Leads Meeting</h1>
+  <span class="sub">Project Update</span>
+</header>
+
+<div class="container">
+
+  <div class="config-warning" id="configWarning">
+    <strong>⚠️ Setup required</strong>
+    Open this file in a text editor and replace <code>YOUR_APPS_SCRIPT_URL</code> near the bottom with your deployed Apps Script URL. See <strong>SETUP.md</strong> for instructions.
+  </div>
+
+  <div class="banner success" id="successBanner">
+    <div class="icon">✅</div>
+    <h2>Update Submitted!</h2>
+    <p id="successMsg"></p>
+    <button class="btn-action green" onclick="resetForm()">Submit Another</button>
+  </div>
+
+  <div class="banner err" id="errorBanner">
+    <div class="icon">⚠️</div>
+    <h2>Submission Failed</h2>
+    <p id="errorMsg"></p>
+    <button class="btn-action red" onclick="hideError()">Try Again</button>
+  </div>
+
+  <form id="leadForm" novalidate>
+    <div class="card">
+      <div class="row2">
+        <div class="field">
+          <label>Meeting Date</label>
+          <input type="date" id="meetingDate" required>
+        </div>
+        <div class="field">
+          <label>Your Name</label>
+          <input type="text" id="leadName" placeholder="e.g. Ryan Stott" autocomplete="name" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>Project # / Name</label>
+        <input type="text" id="projectName" placeholder="e.g. 232 Donner" required>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="items-title">Status / Needs Items</div>
+      <div id="itemsList"></div>
+      <button type="button" class="btn-add-item" onclick="addItem()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="8" y1="5" x2="8" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Add Item
+      </button>
+    </div>
+
+    <button type="submit" class="btn-submit" id="submitBtn">Submit Update</button>
+  </form>
+
+</div>
+
+<script>
+  // ══════════════════════════════════════════════════════
+  //  STEP 1: Replace this URL with your Apps Script URL
+  const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL';
+  // ══════════════════════════════════════════════════════
+
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycby82OvqsMh8_g5Asnh8B5WjPAvjg8OuFYFnKLdKxmt6HRsPVTT8TK63r_aFHxs-uPdbAA/exec') {
+    document.getElementById('configWarning').classList.add('show');
+    document.getElementById('submitBtn').disabled = true;
+  }
+
+  // Pre-fill date and saved name
+  document.getElementById('meetingDate').valueAsDate = new Date();
+  const savedName = localStorage.getItem('leads_name');
+  if (savedName) document.getElementById('leadName').value = savedName;
+
+  function addItem(value = '') {
+    const list = document.getElementById('itemsList');
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    const safe = String(value).replace(/"/g, '&quot;');
+    row.innerHTML = `
+      <input type="text" placeholder="e.g. drywall / mud – next 3 days" value="${safe}">
+      <button type="button" class="btn-remove" onclick="this.parentElement.remove()" aria-label="Remove">×</button>
+    `;
+    list.appendChild(row);
+    if (!value) setTimeout(() => row.querySelector('input').focus(), 50);
+  }
+
+  addItem(); addItem(); addItem();
+
+  document.getElementById('leadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const date    = document.getElementById('meetingDate').value;
+    const lead    = document.getElementById('leadName').value.trim();
+    const project = document.getElementById('projectName').value.trim();
+    const items   = Array.from(document.querySelectorAll('#itemsList .item-row input'))
+                         .map(i => i.value.trim()).filter(Boolean);
+
+    if (!date || !lead || !project) {
+      alert('Please fill in Date, Your Name, and Project.');
+      return;
+    }
+
+    localStorage.setItem('leads_name', lead);
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Submitting…';
+    document.getElementById('errorBanner').classList.remove('show');
+
+    try {
+      const resp = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' }, // avoid CORS preflight
+        body: JSON.stringify({ action: 'submit', date, project, lead, items }),
+      });
+      const text = await resp.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error('Unexpected server response'); }
+      if (data.error) throw new Error(data.error);
+
+      document.getElementById('leadForm').style.display = 'none';
+      document.getElementById('successBanner').classList.add('show');
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const [y,m,d2] = date.split('-');
+      document.getElementById('successMsg').textContent =
+        `${project} — ${lead} · ${items.length} item${items.length !== 1 ? 's' : ''} saved for ${months[+m-1]} ${+d2}`;
+
+    } catch(err) {
+      document.getElementById('errorMsg').textContent =
+        err.message || 'Could not reach the server. Check your connection and try again.';
+      document.getElementById('errorBanner').classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Submit Update';
+    }
+  });
+
+  function hideError() { document.getElementById('errorBanner').classList.remove('show'); }
+
+  function resetForm() {
+    document.getElementById('successBanner').classList.remove('show');
+    document.getElementById('errorBanner').classList.remove('show');
+    document.getElementById('leadForm').style.display = '';
+    document.getElementById('projectName').value = '';
+    document.getElementById('itemsList').innerHTML = '';
+    addItem(); addItem(); addItem();
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').textContent = 'Submit Update';
+    document.getElementById('meetingDate').valueAsDate = new Date();
+  }
+</script>
+</body>
+</html>

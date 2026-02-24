@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads Meeting — Generate Agenda</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap');
+
+  :root {
+    --ink: #1a1a1a;
+    --orange: #E85C1A;
+    --border: #d8d0c8;
+    --bg: #f5f2ee;
+    --card: #ffffff;
+    --muted: #7a7268;
+    --error: #c0432a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  header {
+    background: var(--ink);
+    color: white;
+    padding: 18px 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  header .sub { font-size: 13px; color: #aaa; }
+
+  .container { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 10px; padding: 20px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .row3 { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; }
+
+  label {
+    display: block;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 5px;
+  }
+
+  input[type="date"], input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px; color: var(--ink);
+    background: white;
+    -webkit-appearance: none;
+    transition: border-color 0.15s;
+  }
+  input:focus { outline: none; border-color: var(--orange); }
+
+  /* submissions list */
+  .list-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .list-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .badge {
+    background: var(--orange); color: white;
+    border-radius: 20px; padding: 2px 10px;
+    font-size: 13px; font-weight: 600; margin-left: auto;
+  }
+
+  .toolbar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .btn-sm {
+    padding: 6px 13px;
+    border: 1.5px solid var(--border);
+    background: white; border-radius: 7px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    color: var(--ink); transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-sm:hover { border-color: var(--orange); color: var(--orange); }
+
+  .btn-sm.danger {
+    border-color: #f5d0c5; color: var(--error);
+    margin-left: auto;
+  }
+  .btn-sm.danger:hover { background: #fce8e0; }
+
+  .drag-hint {
+    font-size: 12px; color: var(--muted);
+    text-align: right; margin-bottom: 8px;
+  }
+
+  .sub-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px; margin-bottom: 8px;
+    background: #faf9f7; cursor: grab;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+  .sub-item.selected { border-color: var(--orange); background: #fff3ee; }
+  .sub-item.dragging { opacity: 0.45; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+  .sub-item.drag-over { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(232,92,26,0.25); }
+
+  .sub-item input[type="checkbox"] {
+    width: 19px; height: 19px; margin-top: 2px;
+    accent-color: var(--orange); cursor: pointer; flex-shrink: 0;
+  }
+
+  .sub-info { flex: 1; min-width: 0; }
+  .sub-project {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.03em;
+    color: var(--orange);
+  }
+  .sub-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .sub-tags { margin-top: 6px; }
+  .sub-tags span {
+    display: inline-block;
+    background: #ede9e4; border-radius: 4px;
+    padding: 2px 7px; margin: 2px 3px 2px 0;
+    font-size: 12px; color: #555;
+  }
+
+  .drag-handle {
+    color: #ccc; font-size: 18px; cursor: grab;
+    padding: 2px 4px; flex-shrink: 0; margin-top: 1px;
+    letter-spacing: -2px;
+  }
+
+  .empty-state {
+    text-align: center; padding: 36px 20px;
+    color: var(--muted); font-size: 15px;
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+  .btn-generate {
+    display: block; width: 100%;
+    padding: 17px;
+    background: var(--orange);
+    color: white; border: none;
+    border-radius: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 21px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-top: 4px;
+  }
+  .btn-generate:hover { background: #c44d14; }
+  .btn-generate:disabled { background: #ccc; cursor: not-allowed; }
+
+  .btn-refresh {
+    padding: 8px 16px;
+    border: 1.5px solid var(--border);
+    background: white; border-radius: 8px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; color: var(--ink);
+    display: flex; align-items: center; gap: 6px;
+    transition: border-color 0.15s;
+  }
+  .btn-refresh:hover { border-color: var(--orange); color: var(--orange); }
+  .btn-refresh.spinning svg { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .status-msg { font-size: 13px; color: var(--muted); }
+  .status-msg.err { color: var(--error); }
+
+  .config-warning {
+    background: #fff8e1; border: 1.5px solid #f0c040;
+    border-radius: 10px; padding: 16px; margin-bottom: 14px;
+    font-size: 13px; line-height: 1.6; display: none;
+  }
+  .config-warning.show { display: block; }
+  .config-warning strong { display: block; font-size: 14px; margin-bottom: 4px; }
+  .config-warning code { background: #f5f2ee; border-radius: 3px; padding: 1px 5px; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Leads Meeting</h1>
+  <span class="sub">Agenda Generator</span>
+</header>
+
+<div class="container">
+
+  <div class="config-warning" id="configWarning">
+    <strong>⚠️ Setup required</strong>
+    Open this file in a text editor and replace <code>YOUR_APPS_SCRIPT_URL</code> near the bottom with your deployed Apps Script URL. See <strong>SETUP.md</strong> for instructions.
+  </div>
+
+  <!-- Meeting settings -->
+  <div class="card">
+    <div class="row3">
+      <div class="field">
+        <label>Meeting Date</label>
+        <input type="date" id="meetingDate">
+      </div>
+      <div class="field">
+        <label>Time</label>
+        <input type="text" id="meetingTime" value="4:30 PM">
+      </div>
+      <div class="field">
+        <label>Facilitator</label>
+        <input type="text" id="facilitator" placeholder="Optional">
+      </div>
+    </div>
+  </div>
+
+  <!-- Submissions -->
+  <div class="card">
+    <div class="list-header">
+      <div class="list-title">Submitted Updates</div>
+      <button class="btn-refresh" id="refreshBtn" onclick="loadSubmissions()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M12.5 7A5.5 5.5 0 1 1 7 1.5a5.5 5.5 0 0 1 3.89 1.61L13 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13 1v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Refresh
+      </button>
+      <span class="badge" id="countBadge">0</span>
+    </div>
+
+    <div class="status-row">
+      <div class="toolbar" style="margin:0; flex:1;">
+        <button class="btn-sm" onclick="selectAll()">Select All</button>
+        <button class="btn-sm" onclick="selectNone()">Deselect All</button>
+        <button class="btn-sm danger" onclick="clearAllForDate()" id="clearBtn">Clear Day</button>
+      </div>
+    </div>
+
+    <div class="status-msg" id="statusMsg"></div>
+    <div class="drag-hint">Drag to reorder</div>
+
+    <div id="submissionsList"></div>
+  </div>
+
+  <button class="btn-generate" id="generateBtn" onclick="generateAgenda()" disabled>
+    ⬇ Download Agenda (.docx)
+  </button>
+
+</div>
+
+<script>
+  // ══════════════════════════════════════════════════════
+  //  STEP 1: Replace this URL with your Apps Script URL
+  const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL';
+  // ══════════════════════════════════════════════════════
+
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycby82OvqsMh8_g5Asnh8B5WjPAvjg8OuFYFnKLdKxmt6HRsPVTT8TK63r_aFHxs-uPdbAA/exec') {
+    document.getElementById('configWarning').classList.add('show');
+  }
+
+  let submissions = []; // { id, date, project, lead, items, selected }
+  let dragSrcIdx = null;
+
+  // Init
+  document.getElementById('meetingDate').valueAsDate = new Date();
+  document.getElementById('meetingDate').addEventListener('change', loadSubmissions);
+  loadSubmissions();
+
+  // ── Load from server ─────────────────────────────────────────
+  async function loadSubmissions() {
+    const date = document.getElementById('meetingDate').value;
+    if (!date) return;
+
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    setStatus('Loading…', false);
+
+    try {
+      const url = `${APPS_SCRIPT_URL}?date=${encodeURIComponent(date)}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+
+      if (data.error) throw new Error(data.error);
+
+      // Preserve selection state for already-loaded items by id
+      const prevSelected = {};
+      submissions.forEach(s => prevSelected[s.id] = s.selected);
+
+      submissions = data.submissions.map(s => ({
+        ...s,
+        selected: s.id in prevSelected ? prevSelected[s.id] : true
+      }));
+
+      setStatus(submissions.length ? `Last refreshed ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}` : '', false);
+      renderList();
+    } catch(err) {
+      setStatus('Error: ' + err.message, true);
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  }
+
+  function setStatus(msg, isErr) {
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg' + (isErr ? ' err' : '');
+  }
+
+  // ── Render ───────────────────────────────────────────────────
+  function renderList() {
+    const list = document.getElementById('submissionsList');
+    document.getElementById('countBadge').textContent = submissions.length;
+    document.getElementById('generateBtn').disabled = submissions.length === 0;
+
+    if (submissions.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">📭</div>No updates submitted for this date yet.</div>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    submissions.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'sub-item' + (s.selected !== false ? ' selected' : '');
+      div.draggable = true;
+      div.dataset.idx = i;
+
+      const tags = s.items && s.items.length
+        ? s.items.map(it => `<span>${esc(it)}</span>`).join('')
+        : `<span style="color:#bbb">No items</span>`;
+
+      const time = s.submittedAt ? new Date(s.submittedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : '';
+
+      div.innerHTML = `
+        <span class="drag-handle" title="Drag to reorder">⠿</span>
+        <input type="checkbox" ${s.selected !== false ? 'checked' : ''} onchange="toggleSelect(${i}, this.checked)">
+        <div class="sub-info">
+          <div class="sub-project">${esc(s.project)}</div>
+          <div class="sub-meta">${esc(s.lead)}${time ? ' · ' + time : ''}</div>
+          <div class="sub-tags">${tags}</div>
+        </div>
+      `;
+
+      // Drag
+      div.addEventListener('dragstart', () => {
+        dragSrcIdx = i;
+        setTimeout(() => div.classList.add('dragging'), 0);
+      });
+      div.addEventListener('dragend', () => {
+        div.classList.remove('dragging');
+        document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('drag-over'));
+      });
+      div.addEventListener('dragover', e => {
+        e.preventDefault();
+        document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('drag-over'));
+        div.classList.add('drag-over');
+      });
+      div.addEventListener('drop', e => {
+        e.preventDefault();
+        if (dragSrcIdx === null || dragSrcIdx === i) return;
+        const moved = submissions.splice(dragSrcIdx, 1)[0];
+        submissions.splice(i, 0, moved);
+        renderList();
+        dragSrcIdx = null;
+      });
+
+      list.appendChild(div);
+    });
+  }
+
+  function toggleSelect(idx, checked) {
+    submissions[idx].selected = checked;
+    document.querySelectorAll('.sub-item')[idx].classList.toggle('selected', checked);
+  }
+
+  function selectAll()  { submissions.forEach(s => s.selected = true);  renderList(); }
+  function selectNone() { submissions.forEach(s => s.selected = false); renderList(); }
+
+  async function clearAllForDate() {
+    const date = document.getElementById('meetingDate').value;
+    if (!confirm(`Delete all ${submissions.length} submission(s) for ${formatDate(date)}?`)) return;
+    // Delete each by id
+    for (const s of submissions) {
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'delete', id: s.id })
+        });
+      } catch(e) { /* ignore individual failures */ }
+    }
+    submissions = [];
+    renderList();
+    setStatus('All submissions cleared.', false);
+  }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const [y,m,d] = dateStr.split('-');
+    const months = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+    return `${months[+m-1]} ${+d}, ${y}`;
+  }
+
+  // ── DOCX Generation ──────────────────────────────────────────
+  async function generateAgenda() {
+    const {
+      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+      AlignmentType, WidthType, BorderStyle, ShadingType, LevelFormat,
+      VerticalAlign
+    } = docx;
+
+    const date        = document.getElementById('meetingDate').value;
+    const time        = document.getElementById('meetingTime').value.trim();
+    const facilitator = document.getElementById('facilitator').value.trim();
+    const selected    = submissions.filter(s => s.selected !== false);
+
+    if (selected.length === 0) { alert('Select at least one submission first.'); return; }
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+
+    try {
+      // ── Design tokens ──
+      const DARK   = '1A1A1A';
+      const ORANGE = 'E85C1A';
+      const MUTED  = '7A7268';
+      const WHITE  = 'FFFFFF';
+      const ALT    = 'FAFAF8';
+
+      const thin = { style: BorderStyle.SINGLE, size: 4, color: 'D8D0C8' };
+      const cellMargins = { top: 100, bottom: 100, left: 130, right: 130 };
+
+      // ── Header row ──
+      function headerRow() {
+        const hCell = (text, w) => new TableCell({
+          width: { size: w, type: WidthType.DXA },
+          shading: { fill: DARK, type: ShadingType.CLEAR },
+          margins: { top: 80, bottom: 80, left: 130, right: 130 },
+          borders: { top: thin, bottom: thin, left: thin, right: thin },
+          children: [new Paragraph({ children: [
+            new TextRun({ text, bold: true, size: 18, color: WHITE, font: 'Arial' })
+          ]})]
+        });
+        return new TableRow({ tableHeader: true, children: [
+          hCell('PROJECT', 1440), hCell('LEAD(S)', 1960), hCell('KEY NOTES / NEEDS', 5960)
+        ]});
+      }
+
+      // ── Project row ──
+      function projectRow(sub, alt) {
+        const fill = alt ? ALT : WHITE;
+        const itemParas = (sub.items && sub.items.length)
+          ? sub.items.map(it => new Paragraph({
+              numbering: { reference: 'checks', level: 0 },
+              children: [new TextRun({ text: it, size: 20, font: 'Arial' })]
+            }))
+          : [new Paragraph({ children: [new TextRun({ text: '—', size: 20, color: MUTED, font: 'Arial' })] })];
+
+        return new TableRow({ children: [
+          new TableCell({
+            width: { size: 1440, type: WidthType.DXA },
+            shading: { fill, type: ShadingType.CLEAR },
+            margins: cellMargins, verticalAlign: VerticalAlign.TOP,
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: [new Paragraph({ children: [
+              new TextRun({ text: sub.project||'', bold: true, size: 22, font: 'Arial', color: ORANGE })
+            ]})]
+          }),
+          new TableCell({
+            width: { size: 1960, type: WidthType.DXA },
+            shading: { fill, type: ShadingType.CLEAR },
+            margins: cellMargins, verticalAlign: VerticalAlign.TOP,
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: [new Paragraph({ children: [
+              new TextRun({ text: sub.lead||'', size: 20, font: 'Arial' })
+            ]})]
+          }),
+          new TableCell({
+            width: { size: 5960, type: WidthType.DXA },
+            shading: { fill, type: ShadingType.CLEAR },
+            margins: cellMargins, verticalAlign: VerticalAlign.TOP,
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: itemParas
+          }),
+        ]});
+      }
+
+      // ── Action item row ──
+      function actionRow() {
+        return new TableRow({ children: [
+          new TableCell({
+            columnSpan: 2,
+            width: { size: 6200, type: WidthType.DXA },
+            margins: { top: 80, bottom: 80, left: 130, right: 130 },
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: [new Paragraph({ children: [
+              new TextRun({ text: '\u2610  ', size: 22, font: 'Arial' }),
+              new TextRun({ text: '_'.repeat(60), size: 18, color: 'CCCCCC', font: 'Arial' }),
+            ]})]
+          }),
+          new TableCell({
+            width: { size: 3160, type: WidthType.DXA },
+            margins: { top: 80, bottom: 80, left: 130, right: 130 },
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: [new Paragraph({ children: [
+              new TextRun({ text: 'Owner: ', size: 18, bold: true, font: 'Arial' }),
+              new TextRun({ text: '_____________   ', size: 18, color: 'CCCCCC', font: 'Arial' }),
+              new TextRun({ text: 'Due: ', size: 18, bold: true, font: 'Arial' }),
+              new TextRun({ text: '___________', size: 18, color: 'CCCCCC', font: 'Arial' }),
+            ]})]
+          }),
+        ]});
+      }
+
+      const doc = new Document({
+        numbering: {
+          config: [{
+            reference: 'checks',
+            levels: [{
+              level: 0, format: LevelFormat.BULLET, text: '\u2610',
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 360, hanging: 320 } } }
+            }]
+          }]
+        },
+        sections: [{
+          properties: {
+            page: {
+              size: { width: 12240, height: 15840 },
+              margin: { top: 900, right: 900, bottom: 900, left: 900 }
+            }
+          },
+          children: [
+            // Title
+            new Paragraph({
+              spacing: { after: 0 },
+              children: [new TextRun({ text: 'LEADS MEETING', bold: true, size: 44, font: 'Arial', color: DARK })]
+            }),
+            // Meta line + orange rule
+            new Paragraph({
+              border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: ORANGE } },
+              spacing: { after: 200 },
+              children: [
+                new TextRun({ text: 'Week of: ', size: 22, font: 'Arial', color: MUTED }),
+                new TextRun({ text: '_______________________', size: 22, font: 'Arial', color: 'CCCCCC' }),
+                new TextRun({ text: '    Meeting Date: ', size: 22, font: 'Arial', color: MUTED }),
+                new TextRun({ text: formatDate(date), size: 22, bold: true, font: 'Arial' }),
+                new TextRun({ text: '    Time: ', size: 22, font: 'Arial', color: MUTED }),
+                new TextRun({ text: time, size: 22, bold: true, font: 'Arial' }),
+                new TextRun({ text: '    Facilitator: ', size: 22, font: 'Arial', color: MUTED }),
+                new TextRun({ text: facilitator || '_____________________', size: 22, bold: !!facilitator, font: 'Arial' }),
+              ]
+            }),
+            // Section head
+            new Paragraph({
+              spacing: { before: 200, after: 120 },
+              children: [new TextRun({ text: 'PROJECT UPDATES — STATUS / NEEDS', bold: true, size: 22, font: 'Arial', color: ORANGE })]
+            }),
+            // Project table
+            new Table({
+              width: { size: 9360, type: WidthType.DXA },
+              columnWidths: [1440, 1960, 5960],
+              rows: [headerRow(), ...selected.map((s, i) => projectRow(s, i % 2 === 1))]
+            }),
+            // Q&A section
+            new Paragraph({
+              spacing: { before: 400, after: 120 },
+              children: [new TextRun({ text: 'Q&A / OPEN DISCUSSION', bold: true, size: 22, font: 'Arial', color: ORANGE })]
+            }),
+            ...[0,1,2].map(() => new Paragraph({
+              border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } },
+              spacing: { before: 100, after: 100 },
+              children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })]
+            })),
+            // Action items section
+            new Paragraph({
+              spacing: { before: 380, after: 120 },
+              children: [new TextRun({ text: 'ACTION ITEMS / FOLLOW-UPS', bold: true, size: 22, font: 'Arial', color: ORANGE })]
+            }),
+            new Table({
+              width: { size: 9360, type: WidthType.DXA },
+              columnWidths: [6200, 3160],
+              rows: [actionRow(), actionRow(), actionRow()]
+            }),
+            // Footer
+            new Paragraph({
+              spacing: { before: 480 },
+              alignment: AlignmentType.CENTER,
+              children: [new TextRun({
+                text: `Generated ${new Date().toLocaleDateString()} · ${selected.length} project${selected.length !== 1 ? 's' : ''}`,
+                size: 16, color: MUTED, font: 'Arial'
+              })]
+            }),
+          ]
+        }]
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const fileName = `Leads_Agenda_${date.replace(/-/g,'')}.docx`;
+      saveAs(blob, fileName);
+
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⬇ Download Agenda (.docx)';
+    }
+  }
+</script>
+</body>
+</html>
