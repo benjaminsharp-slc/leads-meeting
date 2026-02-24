@@ -21,24 +21,36 @@ function doGet(e) {
   }
 }
 
-// ── List submissions for a date ──────────────────────────────
+// ── List submissions (all, or filtered by date) ─────────────
 function handleList(e) {
-  const date = e.parameter.date;
-  if (!date) return { error: "Missing date parameter" };
+  const dateFilter = e.parameter.date || "";
 
   const sheet = getOrCreateSheet();
   const data  = sheet.getDataRange().getValues();
 
   const submissions = data.slice(1)
-    .filter(row => row[0] === date)
-    .map(row => ({
-      date:        row[0],
-      project:     row[1],
-      lead:        row[2],
-      items:       safeParseJSON(row[3]),
-      submittedAt: row[4],
-      id:          row[5]
-    }));
+    .filter(function(row) {
+      if (!row[5]) return false; // skip empty/header rows
+      if (!dateFilter) return true; // no filter → return all
+      // Normalize both sides to string for safe comparison
+      var rowDate = (row[0] instanceof Date)
+        ? Utilities.formatDate(row[0], Session.getScriptTimeZone(), "yyyy-MM-dd")
+        : String(row[0]).trim();
+      return rowDate === dateFilter.trim();
+    })
+    .map(function(row) {
+      var rowDate = (row[0] instanceof Date)
+        ? Utilities.formatDate(row[0], Session.getScriptTimeZone(), "yyyy-MM-dd")
+        : String(row[0]).trim();
+      return {
+        date:        rowDate,
+        project:     row[1],
+        lead:        row[2],
+        items:       safeParseJSON(row[3]),
+        submittedAt: row[4],
+        id:          row[5]
+      };
+    });
 
   return { submissions };
 }
