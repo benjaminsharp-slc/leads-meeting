@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leads Meeting — Generate Agenda</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap');
 
@@ -402,81 +402,117 @@
   }
 
   async function generateAgenda() {
-    const {
-      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-      AlignmentType, WidthType, BorderStyle, ShadingType, LevelFormat, VerticalAlign
-    } = docx;
+    var btn    = document.getElementById('generateBtn');
+    var errEl  = document.getElementById('genError');
 
-    const date        = document.getElementById('meetingDate').value;
-    const time        = document.getElementById('meetingTime').value.trim();
-    const facilitator = document.getElementById('facilitator').value.trim();
-    const selected    = submissions.filter(s => s.selected !== false);
-
-    if (selected.length === 0) { alert('Select at least one submission first.'); return; }
-
-    const btn = document.getElementById('generateBtn');
+    // Show loading state immediately so user gets feedback
     btn.disabled = true;
-    btn.innerHTML = '<span class="btn-spinner"></span> Building…';
-    document.getElementById('genError').style.display = 'none';
+    btn.innerHTML = '<span class="btn-spinner"></span> Building\u2026';
+    errEl.style.display = 'none';
+
+    // Yield to browser so spinner actually renders before heavy sync work
+    await new Promise(function(r) { setTimeout(r, 50); });
 
     try {
-      const DARK = '1A1A1A', ORANGE = 'E85C1A', MUTED = '7A7268', WHITE = 'FFFFFF', ALT = 'FAFAF8';
-      const thin = { style: BorderStyle.SINGLE, size: 4, color: 'D8D0C8' };
-      const cm   = { top: 100, bottom: 100, left: 130, right: 130 };
+      // Check libraries loaded
+      if (typeof window.docx === 'undefined') throw new Error('docx library failed to load. Check your internet connection and reload the page.');
+      if (typeof window.saveAs === 'undefined') throw new Error('FileSaver library failed to load. Check your internet connection and reload the page.');
 
-      const hCell = (text, w) => new TableCell({
-        width: { size: w, type: WidthType.DXA },
-        shading: { fill: DARK, type: ShadingType.CLEAR },
-        margins: { top: 80, bottom: 80, left: 130, right: 130 },
-        borders: { top: thin, bottom: thin, left: thin, right: thin },
-        children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 18, color: WHITE, font: 'Arial' })] })]
-      });
+      var D = window.docx;
+      var Document    = D.Document;
+      var Packer      = D.Packer;
+      var Paragraph   = D.Paragraph;
+      var TextRun     = D.TextRun;
+      var Table       = D.Table;
+      var TableRow    = D.TableRow;
+      var TableCell   = D.TableCell;
+      var AlignmentType = D.AlignmentType;
+      var WidthType   = D.WidthType;
+      var BorderStyle = D.BorderStyle;
+      var ShadingType = D.ShadingType;
+      var LevelFormat = D.LevelFormat;
+      var VerticalAlign = D.VerticalAlign;
 
-      const headerRow = () => new TableRow({ tableHeader: true, children: [hCell('PROJECT', 1440), hCell('LEAD(S)', 1960), hCell('KEY NOTES / NEEDS', 5960)] });
+      var date        = document.getElementById('meetingDate').value;
+      var time        = document.getElementById('meetingTime').value.trim();
+      var facilitator = document.getElementById('facilitator').value.trim();
+      var selected    = submissions.filter(function(s) { return s.selected !== false; });
 
-      const projectRow = (sub, alt) => {
-        const fill = alt ? ALT : WHITE;
-        const itemParas = (sub.items && sub.items.length)
-          ? sub.items.map(it => new Paragraph({ numbering: { reference: 'checks', level: 0 }, children: [new TextRun({ text: it, size: 20, font: 'Arial' })] }))
-          : [new Paragraph({ children: [new TextRun({ text: '—', size: 20, color: MUTED, font: 'Arial' })] })];
-        const cell = (w, children, isFirst) => new TableCell({
+      if (selected.length === 0) {
+        btn.disabled = false;
+        btn.innerHTML = '&#11015; Download Agenda (.docx)';
+        alert('Select at least one submission first.');
+        return;
+      }
+
+      var DARK = '1A1A1A', ORANGE = 'E85C1A', MUTED = '7A7268', WHITE = 'FFFFFF', ALT = 'FAFAF8';
+      var thin = { style: BorderStyle.SINGLE, size: 4, color: 'D8D0C8' };
+      var cm   = { top: 100, bottom: 100, left: 130, right: 130 };
+
+      function hCell(text, w) {
+        return new TableCell({
           width: { size: w, type: WidthType.DXA },
-          shading: { fill, type: ShadingType.CLEAR },
-          margins: cm, verticalAlign: VerticalAlign.TOP,
+          shading: { fill: DARK, type: ShadingType.CLEAR },
+          margins: { top: 80, bottom: 80, left: 130, right: 130 },
           borders: { top: thin, bottom: thin, left: thin, right: thin },
-          children
+          children: [new Paragraph({ children: [new TextRun({ text: text, bold: true, size: 18, color: WHITE, font: 'Arial' })] })]
         });
+      }
+
+      function headerRow() {
+        return new TableRow({ tableHeader: true, children: [hCell('PROJECT', 1440), hCell('LEAD(S)', 1960), hCell('KEY NOTES / NEEDS', 5960)] });
+      }
+
+      function projectRow(sub, alt) {
+        var fill = alt ? ALT : WHITE;
+        var itemParas = (sub.items && sub.items.length)
+          ? sub.items.map(function(it) {
+              return new Paragraph({ numbering: { reference: 'checks', level: 0 }, children: [new TextRun({ text: String(it), size: 20, font: 'Arial' })] });
+            })
+          : [new Paragraph({ children: [new TextRun({ text: '\u2014', size: 20, color: MUTED, font: 'Arial' })] })];
+
+        function cell(w, children) {
+          return new TableCell({
+            width: { size: w, type: WidthType.DXA },
+            shading: { fill: fill, type: ShadingType.CLEAR },
+            margins: cm, verticalAlign: VerticalAlign.TOP,
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: children
+          });
+        }
         return new TableRow({ children: [
-          cell(1440, [new Paragraph({ children: [new TextRun({ text: sub.project||'', bold: true, size: 22, font: 'Arial', color: ORANGE })] })]),
-          cell(1960, [new Paragraph({ children: [new TextRun({ text: sub.lead||'', size: 20, font: 'Arial' })] })]),
-          cell(5960, itemParas),
+          cell(1440, [new Paragraph({ children: [new TextRun({ text: String(sub.project || ''), bold: true, size: 22, font: 'Arial', color: ORANGE })] })]),
+          cell(1960, [new Paragraph({ children: [new TextRun({ text: String(sub.lead || ''), size: 20, font: 'Arial' })] })]),
+          cell(5960, itemParas)
         ]});
-      };
+      }
 
-      const actionRow = () => new TableRow({ children: [
-        new TableCell({
-          columnSpan: 2, width: { size: 6200, type: WidthType.DXA },
-          margins: { top: 80, bottom: 80, left: 130, right: 130 },
-          borders: { top: thin, bottom: thin, left: thin, right: thin },
-          children: [new Paragraph({ children: [
-            new TextRun({ text: '\u2610  ', size: 22, font: 'Arial' }),
-            new TextRun({ text: '_'.repeat(60), size: 18, color: 'CCCCCC', font: 'Arial' }),
-          ]})]
-        }),
-        new TableCell({
-          width: { size: 3160, type: WidthType.DXA },
-          margins: { top: 80, bottom: 80, left: 130, right: 130 },
-          borders: { top: thin, bottom: thin, left: thin, right: thin },
-          children: [new Paragraph({ children: [
-            new TextRun({ text: 'Owner: ', size: 18, bold: true, font: 'Arial' }),
-            new TextRun({ text: '_____________   ', size: 18, color: 'CCCCCC', font: 'Arial' }),
-            new TextRun({ text: 'Due: ', size: 18, bold: true, font: 'Arial' }),
-            new TextRun({ text: '___________', size: 18, color: 'CCCCCC', font: 'Arial' }),
-          ]})]
-        }),
-      ]});
+      function actionRow() {
+        return new TableRow({ children: [
+          new TableCell({
+            columnSpan: 2, width: { size: 6200, type: WidthType.DXA },
+            margins: { top: 80, bottom: 80, left: 130, right: 130 },
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: [new Paragraph({ children: [
+              new TextRun({ text: '\u2610  ', size: 22, font: 'Arial' }),
+              new TextRun({ text: '_'.repeat(60), size: 18, color: 'CCCCCC', font: 'Arial' })
+            ]})]
+          }),
+          new TableCell({
+            width: { size: 3160, type: WidthType.DXA },
+            margins: { top: 80, bottom: 80, left: 130, right: 130 },
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            children: [new Paragraph({ children: [
+              new TextRun({ text: 'Owner: ', size: 18, bold: true, font: 'Arial' }),
+              new TextRun({ text: '_____________   ', size: 18, color: 'CCCCCC', font: 'Arial' }),
+              new TextRun({ text: 'Due: ', size: 18, bold: true, font: 'Arial' }),
+              new TextRun({ text: '___________', size: 18, color: 'CCCCCC', font: 'Arial' })
+            ]})]
+          })
+        ]});
+      }
 
-      const doc = new Document({
+      var doc = new Document({
         numbering: { config: [{ reference: 'checks', levels: [{ level: 0, format: LevelFormat.BULLET, text: '\u2610', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 360, hanging: 320 } } } }] }] },
         sections: [{
           properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 900, right: 900, bottom: 900, left: 900 } } },
@@ -493,27 +529,28 @@
                 new TextRun({ text: '    Time: ', size: 22, font: 'Arial', color: MUTED }),
                 new TextRun({ text: time, size: 22, bold: true, font: 'Arial' }),
                 new TextRun({ text: '    Facilitator: ', size: 22, font: 'Arial', color: MUTED }),
-                new TextRun({ text: facilitator || '_____________________', size: 22, bold: !!facilitator, font: 'Arial' }),
+                new TextRun({ text: facilitator || '_____________________', size: 22, bold: !!facilitator, font: 'Arial' })
               ]
             }),
-            new Paragraph({ spacing: { before: 200, after: 120 }, children: [new TextRun({ text: 'PROJECT UPDATES — STATUS / NEEDS', bold: true, size: 22, font: 'Arial', color: ORANGE })] }),
-            new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [1440, 1960, 5960], rows: [headerRow(), ...selected.map((s, i) => projectRow(s, i % 2 === 1))] }),
+            new Paragraph({ spacing: { before: 200, after: 120 }, children: [new TextRun({ text: 'PROJECT UPDATES \u2014 STATUS / NEEDS', bold: true, size: 22, font: 'Arial', color: ORANGE })] }),
+            new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [1440, 1960, 5960], rows: [headerRow()].concat(selected.map(function(s, i) { return projectRow(s, i % 2 === 1); })) }),
             new Paragraph({ spacing: { before: 400, after: 120 }, children: [new TextRun({ text: 'Q&A / OPEN DISCUSSION', bold: true, size: 22, font: 'Arial', color: ORANGE })] }),
-            ...[0,1,2].map(() => new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } }, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })] })),
+            new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } }, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })] }),
+            new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } }, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })] }),
+            new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } }, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })] }),
             new Paragraph({ spacing: { before: 380, after: 120 }, children: [new TextRun({ text: 'ACTION ITEMS / FOLLOW-UPS', bold: true, size: 22, font: 'Arial', color: ORANGE })] }),
             new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [6200, 3160], rows: [actionRow(), actionRow(), actionRow()] }),
-            new Paragraph({ spacing: { before: 480 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Generated ${new Date().toLocaleDateString()} · ${selected.length} project${selected.length !== 1 ? 's' : ''}`, size: 16, color: MUTED, font: 'Arial' })] }),
+            new Paragraph({ spacing: { before: 480 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Generated ' + new Date().toLocaleDateString() + ' \xb7 ' + selected.length + ' project' + (selected.length !== 1 ? 's' : ''), size: 16, color: MUTED, font: 'Arial' })] })
           ]
         }]
       });
 
-      const blob     = await Packer.toBlob(doc);
-      const fileName = `Leads_Agenda_${date.replace(/-/g,'')}.docx`;
-            saveAs(blob, fileName);
+      var blob     = await Packer.toBlob(doc);
+      var fileName = 'Leads_Agenda_' + date.replace(/-/g, '') + '.docx';
+      window.saveAs(blob, fileName);
 
-      // Success feedback
       btn.disabled = false;
-      btn.innerHTML = '&#10003; Downloaded &mdash; ' + fileName;
+      btn.innerHTML = '&#10003; Downloaded \u2014 ' + fileName;
       btn.style.background = '#2d7a4f';
       setTimeout(function() {
         btn.innerHTML = '&#11015; Download Agenda (.docx)';
@@ -524,12 +561,12 @@
       btn.disabled = false;
       btn.innerHTML = '&#11015; Download Agenda (.docx)';
       btn.style.background = '';
-      var errEl = document.getElementById('genError');
       errEl.textContent = 'Error: ' + (err.message || String(err));
       errEl.style.display = 'block';
       console.error('generateAgenda error:', err);
     }
   }
+
   // ── JSONP helper — works across all domains with Apps Script ──
   function jsonp(params, onSuccess, onError) {
     const cbName = '_cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
