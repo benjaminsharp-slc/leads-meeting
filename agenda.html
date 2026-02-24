@@ -247,136 +247,103 @@
     document.getElementById('configWarning').classList.add('show');
   }
 
-  // allData holds every row from the sheet; submissions is filtered to selected date
-  let allData     = [];
-  let submissions = []; // rows matching current date, with selection state
+
+
+  let submissions = []; // all rows from the sheet
   let dragSrcIdx  = null;
 
+  // Meeting date is just for the agenda header — defaults to today
   document.getElementById('meetingDate').valueAsDate = new Date();
-  document.getElementById('meetingDate').addEventListener('change', function() {
-    applyDateFilter();
-  });
 
-  // Load all data on page open
+  // Load on page open
   loadSubmissions();
 
-  // Load ALL data from sheet on page load / refresh
   function loadSubmissions() {
-    const btn = document.getElementById('refreshBtn');
+    var btn = document.getElementById('refreshBtn');
     btn.classList.add('spinning');
-    setStatus('Loading…', false);
+    setStatus('Loading...', false);
 
     jsonp({ action: 'list' }, function(data) {
       btn.classList.remove('spinning');
-      if (data.error) { setStatus(data.error, true); return; }
+      if (data.error) { setStatus('Error: ' + data.error, true); return; }
 
-      // Preserve selection state for rows we already had
-      const prev = {};
-      allData.forEach(function(s) { prev[s.id] = s.selected; });
+      // Preserve selection state across refreshes
+      var prev = {};
+      submissions.forEach(function(s) { prev[s.id] = s.selected; });
 
-      allData = data.submissions.map(function(s) {
-        return Object.assign({}, s, { selected: s.id in prev ? prev[s.id] : true });
+      submissions = data.submissions.map(function(s) {
+        return { date: s.date, project: s.project, lead: s.lead, items: s.items,
+                 submittedAt: s.submittedAt, id: s.id,
+                 selected: s.id in prev ? prev[s.id] : true };
       });
 
-      // Populate the date picker with dates that have data
-      populateDateOptions();
-      applyDateFilter();
-
       setStatus('Last refreshed ' + new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}), false);
+      renderList();
     }, function(err) {
       btn.classList.remove('spinning');
-      setStatus(err, true);
+      setStatus('Error: ' + err, true);
     });
   }
 
-  // Fill the date input's datalist with dates that have submissions
-  function populateDateOptions() {
-    var dates = {};
-    allData.forEach(function(s) { if (s.date) dates[s.date] = true; });
-    var datelist = document.getElementById('dateOptions');
-    if (!datelist) {
-      datelist = document.createElement('datalist');
-      datelist.id = 'dateOptions';
-      document.getElementById('meetingDate').setAttribute('list', 'dateOptions');
-      document.body.appendChild(datelist);
-    }
-    datelist.innerHTML = Object.keys(dates).sort().reverse()
-      .map(function(d) { return '<option value="' + d + '">'; }).join('');
-  }
-
-  // Filter allData to the selected date and re-render
-  function applyDateFilter() {
-    const date = document.getElementById('meetingDate').value;
-    if (!date) {
-      submissions = [];
-      renderList();
-      return;
-    }
-    submissions = allData.filter(function(s) { return s.date === date; });
-    renderList();
-  }
-
   function setStatus(msg, isErr) {
-    const el = document.getElementById('statusMsg');
+    var el = document.getElementById('statusMsg');
     el.textContent = msg;
-    el.className   = 'status-msg' + (isErr ? ' err' : '');
+    el.className = 'status-msg' + (isErr ? ' err' : '');
   }
 
-  // ── Render ───────────────────────────────────────────────────
   function renderList() {
-    const list = document.getElementById('submissionsList');
+    var list = document.getElementById('submissionsList');
     document.getElementById('countBadge').textContent = submissions.length;
     document.getElementById('generateBtn').disabled   = submissions.length === 0;
 
     if (submissions.length === 0) {
-      const date = document.getElementById('meetingDate').value;
-      const datesAvailable = [...new Set(allData.map(s => s.date))].sort().reverse();
-      const hint = datesAvailable.length
-        ? '<div style="font-size:13px;margin-top:8px;color:#aaa;">Dates with data: ' +
-          datesAvailable.map(function(d) {
-            const [y,m,dy] = d.split('-');
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return '<span style="background:#eee;border-radius:4px;padding:2px 7px;margin:2px;display:inline-block;cursor:pointer;" onclick="document.getElementById('meetingDate').value='' + d + '';applyDateFilter()">'
-              + months[+m-1] + ' ' + +dy + ', ' + y + '</span>';
-          }).join('') + '</div>'
-        : '<div style="font-size:13px;margin-top:8px;color:#aaa;">No submissions in the sheet yet. Make sure leads have submitted the form.</div>';
-      list.innerHTML = '<div class="empty-state"><div class="icon">📭</div>No updates for this date.' + hint + '</div>';
+      list.innerHTML = '<div class="empty-state"><div class="icon">&#128205;</div>No submissions in the sheet yet.</div>';
       return;
     }
 
     list.innerHTML = '';
     submissions.forEach(function(s, i) {
-      const div = document.createElement('div');
+      var div = document.createElement('div');
       div.className = 'sub-item' + (s.selected !== false ? ' selected' : '');
       div.draggable = true;
-      div.dataset.idx = i;
 
-      const tags = s.items && s.items.length
+      var tags = (s.items && s.items.length)
         ? s.items.map(function(it) { return '<span>' + esc(it) + '</span>'; }).join('')
         : '<span style="color:#bbb">No items</span>';
 
-      const time = s.submittedAt
+      var time = s.submittedAt
         ? new Date(s.submittedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : '';
 
       div.innerHTML =
-        '<span class="drag-handle" title="Drag to reorder">⠿</span>' +
-        '<input type="checkbox" ' + (s.selected !== false ? 'checked' : '') + ' onchange="toggleSelect(' + i + ', this.checked)">' +
+        '<span class="drag-handle" title="Drag to reorder">&#10808;</span>' +
+        '<input type="checkbox" ' + (s.selected !== false ? 'checked' : '') +
+        ' onchange="toggleSelect(' + i + ', this.checked)">' +
         '<div class="sub-info">' +
           '<div class="sub-project">' + esc(s.project) + '</div>' +
-          '<div class="sub-meta">' + esc(s.lead) + (time ? ' · ' + time : '') + '</div>' +
+          '<div class="sub-meta">' + esc(s.lead) + (time ? ' &middot; ' + time : '') + '</div>' +
           '<div class="sub-tags">' + tags + '</div>' +
         '</div>';
 
-      div.addEventListener('dragstart', function() { dragSrcIdx = i; setTimeout(function() { div.classList.add('dragging'); }, 0); });
-      div.addEventListener('dragend',   function() { div.classList.remove('dragging'); document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); }); });
-      div.addEventListener('dragover',  function(e) { e.preventDefault(); document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); }); div.classList.add('drag-over'); });
-      div.addEventListener('drop',      function(e) {
-        e.preventDefault();
+      div.addEventListener('dragstart', function() {
+        dragSrcIdx = i;
+        setTimeout(function() { div.classList.add('dragging'); }, 0);
+      });
+      div.addEventListener('dragend', function() {
+        div.classList.remove('dragging');
+        document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); });
+      });
+      div.addEventListener('dragover', function(ev) {
+        ev.preventDefault();
+        document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); });
+        div.classList.add('drag-over');
+      });
+      div.addEventListener('drop', function(ev) {
+        ev.preventDefault();
         if (dragSrcIdx === null || dragSrcIdx === i) return;
-        // Reorder within submissions array and sync back to allData
-        const moved = submissions.splice(dragSrcIdx, 1)[0];
+        var moved = submissions.splice(dragSrcIdx, 1)[0];
         submissions.splice(i, 0, moved);
-        renderList(); dragSrcIdx = null;
+        renderList();
+        dragSrcIdx = null;
       });
 
       list.appendChild(div);
@@ -391,36 +358,33 @@
   function selectNone() { submissions.forEach(function(s) { s.selected = false; }); renderList(); }
 
   function clearAllForDate() {
-    const date = document.getElementById('meetingDate').value;
-    if (!confirm('Delete all ' + submissions.length + ' submission(s) for ' + formatDate(date) + '?')) return;
-    let remaining = submissions.length;
+    if (!confirm('Delete all ' + submissions.length + ' submission(s) from the sheet?')) return;
+    var remaining = submissions.length;
     if (remaining === 0) return;
-    const toDelete = submissions.slice();
+    var toDelete = submissions.slice();
     toDelete.forEach(function(s) {
       jsonp({ action: 'delete', id: s.id }, function() {
-        allData = allData.filter(function(r) { return r.id !== s.id; });
         remaining--;
-        if (remaining === 0) { applyDateFilter(); setStatus('Submissions for ' + formatDate(date) + ' cleared.', false); }
+        if (remaining === 0) { submissions = []; renderList(); setStatus('All submissions cleared.', false); }
       }, function() {
         remaining--;
-        if (remaining === 0) { applyDateFilter(); setStatus('Some deletions may have failed.', true); }
+        if (remaining === 0) { submissions = []; renderList(); setStatus('Done (some may have failed).', true); }
       });
     });
   }
 
-  function esc(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   function formatDate(dateStr) {
     if (!dateStr) return '';
-    const [y,m,d] = dateStr.split('-');
-    const months = ['January','February','March','April','May','June',
-                    'July','August','September','October','November','December'];
-    return `${months[+m-1]} ${+d}, ${y}`;
+    var parts = dateStr.split('-');
+    var months = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+    return months[+parts[1]-1] + ' ' + +parts[2] + ', ' + parts[0];
   }
 
-  // ── DOCX ─────────────────────────────────────────────────────
   async function generateAgenda() {
     const {
       Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
