@@ -84,6 +84,26 @@
     box-shadow: 0 0 0 3px rgba(232,92,26,0.12);
   }
 
+  select {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px; color: var(--ink);
+    background: white; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7268' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  select:focus {
+    outline: none; border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(232,92,26,0.12);
+  }
+  select:disabled { background-color: #f5f2ee; color: var(--muted); }
+
   .items-title {
     font-size: 11px; font-weight: 700;
     letter-spacing: 0.08em; text-transform: uppercase;
@@ -226,8 +246,11 @@
         </div>
       </div>
       <div class="field">
-        <label>Project # / Name</label>
-        <input type="text" id="projectName" placeholder="e.g. 232 Donner" required>
+        <label>Job</label>
+        <select id="projectName" required>
+          <option value="">Loading jobs…</option>
+        </select>
+        <div id="jobLoadError" style="display:none;font-size:12px;color:var(--error);margin-top:5px;"></div>
       </div>
     </div>
 
@@ -264,6 +287,49 @@
   const savedName = localStorage.getItem('leads_name');
   if (savedName) document.getElementById('leadName').value = savedName;
 
+  // ── Load jobs from sheet ──────────────────────────────────
+  function loadJobs() {
+    var sel = document.getElementById('projectName');
+    var errEl = document.getElementById('jobLoadError');
+    sel.disabled = true;
+    sel.innerHTML = '<option value="">Loading jobs…</option>';
+    errEl.style.display = 'none';
+
+    jsonp({ action: 'jobs' }, function(data) {
+      if (data.error) {
+        sel.innerHTML = '<option value="">Could not load jobs</option>';
+        errEl.textContent = data.error;
+        errEl.style.display = 'block';
+        sel.disabled = false;
+        return;
+      }
+      if (!data.jobs || data.jobs.length === 0) {
+        sel.innerHTML = '<option value="">No jobs found — check the Jobs tab</option>';
+        sel.disabled = false;
+        return;
+      }
+      sel.innerHTML = '<option value="">Select a job…</option>';
+      data.jobs.forEach(function(job) {
+        var label = job.number + (job.name ? ' — ' + job.name : '');
+        var opt   = document.createElement('option');
+        opt.value = label;
+        opt.textContent = label;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      document.getElementById('submitBtn').disabled = (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL');
+    }, function(err) {
+      sel.innerHTML = '<option value="">Could not load jobs</option>';
+      errEl.textContent = 'Error loading jobs: ' + err;
+      errEl.style.display = 'block';
+      sel.disabled = false;
+    });
+  }
+
+  if (APPS_SCRIPT_URL !== 'YOUR_APPS_SCRIPT_URL') {
+    loadJobs();
+  }
+
   var itemPlaceholders = [
     'e.g. drywall / mud – next 3 days',
     'e.g. cabinet assembly – ? days',
@@ -292,7 +358,7 @@
 
     const date    = document.getElementById('meetingDate').value;
     const lead    = document.getElementById('leadName').value.trim();
-    const project = document.getElementById('projectName').value.trim();
+    const project = document.getElementById('projectName').value;
     const items   = Array.from(document.querySelectorAll('#itemsList .item-row input'))
                          .map(i => i.value.trim()).filter(Boolean);
 
@@ -344,6 +410,7 @@
     document.getElementById('submitBtn').disabled = false;
     document.getElementById('submitBtn').textContent = 'Submit Update';
     document.getElementById('meetingDate').valueAsDate = new Date();
+    loadJobs();
   }
   // ── JSONP helper — works across all domains with Apps Script ──
   function jsonp(params, onSuccess, onError) {

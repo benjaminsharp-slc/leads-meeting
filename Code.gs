@@ -14,6 +14,7 @@ function doGet(e) {
     if (action === "list")   return jsonResponse(handleList(e),   e);
     if (action === "submit") return jsonResponse(handleSubmit(e), e);
     if (action === "delete") return jsonResponse(handleDelete(e), e);
+    if (action === "jobs")   return jsonResponse(handleJobs(e),   e);
 
     return jsonResponse({ error: "Unknown action: " + action }, e);
   } catch (err) {
@@ -100,6 +101,26 @@ function handleDelete(e) {
   }
 
   return { error: "Row not found" };
+}
+
+// ── Get job list from Jobs tab ──────────────────────────────
+function handleJobs(e) {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Jobs");
+  if (!sheet) return { error: "No 'Jobs' tab found. Please create a sheet named 'Jobs' with Job Number in column A and Name in column B." };
+
+  var data = sheet.getDataRange().getValues();
+  var jobs = data
+    .filter(function(row, i) {
+      // Skip header row if first cell looks like a label
+      if (i === 0 && isNaN(row[0]) && String(row[0]).toLowerCase().indexOf('job') !== -1) return false;
+      return row[0] !== '' && row[0] !== null;
+    })
+    .map(function(row) {
+      return { number: String(row[0]).trim(), name: String(row[1] || '').trim() };
+    });
+
+  return { jobs: jobs };
 }
 
 // ── Helpers ──────────────────────────────────────────────────

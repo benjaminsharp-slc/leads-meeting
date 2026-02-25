@@ -307,8 +307,37 @@
     el.className = 'status-msg' + (isErr ? ' err' : '');
   }
 
+  // ── Merge selected submissions by project for the agenda ────
+  // Returns array of { project, leads: [...], items: [...] }
+  // preserving order of first appearance, with leads/items from
+  // all checked submissions for that project combined.
+  function mergedRows() {
+    var seen  = {}; // project → index in result
+    var result = [];
+    submissions.forEach(function(s) {
+      if (s.selected === false) return;
+      var key = s.project;
+      if (key in seen) {
+        var row = result[seen[key]];
+        if (s.lead && row.leads.indexOf(s.lead) === -1) row.leads.push(s.lead);
+        (s.items || []).forEach(function(it) { row.items.push(it); });
+      } else {
+        seen[key] = result.length;
+        result.push({
+          project: s.project,
+          leads:   s.lead ? [s.lead] : [],
+          items:   (s.items || []).slice()
+        });
+      }
+    });
+    return result;
+  }
+
   function renderList() {
     var list = document.getElementById('submissionsList');
+    var selected = submissions.filter(function(s) { return s.selected !== false; });
+    var merged   = mergedRows();
+
     document.getElementById('countBadge').textContent = submissions.length;
     document.getElementById('generateBtn').disabled   = submissions.length === 0;
 
@@ -317,58 +346,94 @@
       return;
     }
 
+    // Show individual submissions with checkboxes for selection control
     list.innerHTML = '';
-    submissions.forEach(function(s, i) {
-      var div = document.createElement('div');
-      div.className = 'sub-item' + (s.selected !== false ? ' selected' : '');
-      div.draggable = true;
 
-      var tags = (s.items && s.items.length)
-        ? s.items.map(function(it) { return '<span>' + esc(it) + '</span>'; }).join('')
-        : '<span style="color:#bbb">No items</span>';
-
-      var time = s.submittedAt
-        ? new Date(s.submittedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : '';
-
-      div.innerHTML =
-        '<span class="drag-handle" title="Drag to reorder">&#10808;</span>' +
-        '<input type="checkbox" ' + (s.selected !== false ? 'checked' : '') +
-        ' onchange="toggleSelect(' + i + ', this.checked)">' +
-        '<div class="sub-info">' +
-          '<div class="sub-project">' + esc(s.project) + '</div>' +
-          '<div class="sub-meta">' + esc(s.lead) + (time ? ' &middot; ' + time : '') + '</div>' +
-          '<div class="sub-tags">' + tags + '</div>' +
-        '</div>';
-
-      div.addEventListener('dragstart', function() {
-        dragSrcIdx = i;
-        setTimeout(function() { div.classList.add('dragging'); }, 0);
-      });
-      div.addEventListener('dragend', function() {
-        div.classList.remove('dragging');
-        document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); });
-      });
-      div.addEventListener('dragover', function(ev) {
-        ev.preventDefault();
-        document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); });
-        div.classList.add('drag-over');
-      });
-      div.addEventListener('drop', function(ev) {
-        ev.preventDefault();
-        if (dragSrcIdx === null || dragSrcIdx === i) return;
-        var moved = submissions.splice(dragSrcIdx, 1)[0];
-        submissions.splice(i, 0, moved);
-        renderList();
-        dragSrcIdx = null;
-      });
-
-      list.appendChild(div);
+    // Group display by project so user can see how they'll be merged
+    var groups = {}; // project → [submissions]
+    var order  = [];
+    submissions.forEach(function(s) {
+      if (!(s.project in groups)) { groups[s.project] = []; order.push(s.project); }
+      groups[s.project].push(s);
     });
+
+    order.forEach(function(project) {
+      var group = groups[project];
+      var groupSelected = group.some(function(s) { return s.selected !== false; });
+
+      // Project group header
+      var header = document.createElement('div');
+      header.style.cssText = 'font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:700;color:var(--orange);letter-spacing:0.04em;text-transform:uppercase;padding:10px 2px 4px;margin-top:4px;';
+      header.textContent = project;
+      if (group.length > 1) {
+        var badge = document.createElement('span');
+        badge.style.cssText = 'font-family:"Barlow",sans-serif;font-size:11px;font-weight:600;background:#fff3ee;color:var(--orange);border:1px solid var(--orange);border-radius:10px;padding:1px 7px;margin-left:8px;text-transform:none;letter-spacing:0;vertical-align:middle;';
+        badge.textContent = 'will merge ' + group.length + ' submissions';
+        header.appendChild(badge);
+      }
+      list.appendChild(header);
+
+      // Individual submission rows
+      group.forEach(function(s) {
+        var i   = submissions.indexOf(s);
+        var div = document.createElement('div');
+        div.className = 'sub-item' + (s.selected !== false ? ' selected' : '');
+        div.draggable = true;
+
+        var tags = (s.items && s.items.length)
+          ? s.items.map(function(it) { return '<span>' + esc(it) + '</span>'; }).join('')
+          : '<span style="color:#bbb">No items</span>';
+
+        var time = s.submittedAt
+          ? new Date(s.submittedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : '';
+
+        div.innerHTML =
+          '<span class="drag-handle" title="Drag to reorder">&#10808;</span>' +
+          '<input type="checkbox" ' + (s.selected !== false ? 'checked' : '') +
+          ' onchange="toggleSelect(' + i + ', this.checked)">' +
+          '<div class="sub-info">' +
+            '<div class="sub-meta" style="font-weight:600;color:var(--ink);">' + esc(s.lead) + (time ? ' <span style="font-weight:400;color:var(--muted)">&middot; ' + time + '</span>' : '') + '</div>' +
+            '<div class="sub-tags">' + tags + '</div>' +
+          '</div>';
+
+        div.addEventListener('dragstart', function() {
+          dragSrcIdx = i;
+          setTimeout(function() { div.classList.add('dragging'); }, 0);
+        });
+        div.addEventListener('dragend', function() {
+          div.classList.remove('dragging');
+          document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); });
+        });
+        div.addEventListener('dragover', function(ev) {
+          ev.preventDefault();
+          document.querySelectorAll('.sub-item').forEach(function(el) { el.classList.remove('drag-over'); });
+          div.classList.add('drag-over');
+        });
+        div.addEventListener('drop', function(ev) {
+          ev.preventDefault();
+          if (dragSrcIdx === null || dragSrcIdx === i) return;
+          var moved = submissions.splice(dragSrcIdx, 1)[0];
+          submissions.splice(i, 0, moved);
+          renderList();
+          dragSrcIdx = null;
+        });
+
+        list.appendChild(div);
+      });
+    });
+
+    // Preview of merged agenda rows
+    if (merged.length > 0 && merged.length < submissions.filter(function(s){return s.selected!==false;}).length) {
+      var preview = document.createElement('div');
+      preview.style.cssText = 'margin-top:14px;padding:12px 14px;background:#f5f2ee;border-radius:8px;font-size:13px;color:var(--muted);border:1px solid var(--border);';
+      preview.innerHTML = '<strong style="color:var(--ink);">Agenda will have ' + merged.length + ' row' + (merged.length!==1?'s':'') + '</strong> after merging by job.';
+      list.appendChild(preview);
+    }
   }
 
   function toggleSelect(idx, checked) {
     submissions[idx].selected = checked;
-    document.querySelectorAll('.sub-item')[idx].classList.toggle('selected', checked);
+    renderList(); // re-render so merge preview updates
   }
   function selectAll()  { submissions.forEach(function(s) { s.selected = true;  }); renderList(); }
   function selectNone() { submissions.forEach(function(s) { s.selected = false; }); renderList(); }
@@ -465,9 +530,18 @@
 
       function projectRow(sub, alt) {
         var fill = alt ? ALT : WHITE;
+
+        // sub comes from mergedRows(): { project, leads:[], items:[] }
         var itemParas = (sub.items && sub.items.length)
           ? sub.items.map(function(it) {
               return new Paragraph({ numbering: { reference: 'checks', level: 0 }, children: [new TextRun({ text: String(it), size: 20, font: 'Arial' })] });
+            })
+          : [new Paragraph({ children: [new TextRun({ text: '\u2014', size: 20, color: MUTED, font: 'Arial' })] })];
+
+        // Each lead on its own line in the leads cell
+        var leadParas = (sub.leads && sub.leads.length)
+          ? sub.leads.map(function(l) {
+              return new Paragraph({ children: [new TextRun({ text: String(l), size: 20, font: 'Arial' })] });
             })
           : [new Paragraph({ children: [new TextRun({ text: '\u2014', size: 20, color: MUTED, font: 'Arial' })] })];
 
@@ -482,7 +556,7 @@
         }
         return new TableRow({ children: [
           cell(1440, [new Paragraph({ children: [new TextRun({ text: String(sub.project || ''), bold: true, size: 22, font: 'Arial', color: ORANGE })] })]),
-          cell(1960, [new Paragraph({ children: [new TextRun({ text: String(sub.lead || ''), size: 20, font: 'Arial' })] })]),
+          cell(1960, leadParas),
           cell(5960, itemParas)
         ]});
       }
@@ -533,14 +607,14 @@
               ]
             }),
             new Paragraph({ spacing: { before: 200, after: 120 }, children: [new TextRun({ text: 'PROJECT UPDATES \u2014 STATUS / NEEDS', bold: true, size: 22, font: 'Arial', color: ORANGE })] }),
-            new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [1440, 1960, 5960], rows: [headerRow()].concat(selected.map(function(s, i) { return projectRow(s, i % 2 === 1); })) }),
+            new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [1440, 1960, 5960], rows: [headerRow()].concat(mergedRows().map(function(s, i) { return projectRow(s, i % 2 === 1); })) }),
             new Paragraph({ spacing: { before: 400, after: 120 }, children: [new TextRun({ text: 'Q&A / OPEN DISCUSSION', bold: true, size: 22, font: 'Arial', color: ORANGE })] }),
             new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } }, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })] }),
             new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } }, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })] }),
             new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E0DDD8' } }, spacing: { before: 100, after: 100 }, children: [new TextRun({ text: ' ', size: 22, font: 'Arial' })] }),
             new Paragraph({ spacing: { before: 380, after: 120 }, children: [new TextRun({ text: 'ACTION ITEMS / FOLLOW-UPS', bold: true, size: 22, font: 'Arial', color: ORANGE })] }),
             new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [6200, 3160], rows: [actionRow(), actionRow(), actionRow()] }),
-            new Paragraph({ spacing: { before: 480 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Generated ' + new Date().toLocaleDateString() + ' \xb7 ' + selected.length + ' project' + (selected.length !== 1 ? 's' : ''), size: 16, color: MUTED, font: 'Arial' })] })
+            new Paragraph({ spacing: { before: 480 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Generated ' + new Date().toLocaleDateString() + ' \xb7 ' + mergedRows().length + ' project' + (mergedRows().length !== 1 ? 's' : ''), size: 16, color: MUTED, font: 'Arial' })] })
           ]
         }]
       });
